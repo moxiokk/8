@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "lightweight-webserver",
+  "version-string": "1.0.0",
+  "description": "Dependencies for the lightweight Windows origin web server.",
+  "supports": "windows & x64",
+  "dependencies": [
+    "boost-asio",
+    "boost-beast",
+    "boost-system",
+    "openssl",
+    "sqlite3",
+    "nlohmann-json",
+    "re2"
+  ]
+}

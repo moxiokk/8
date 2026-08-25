@@ -1,0 +1,57 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-vs2022-x64",
+      "displayName": "Windows x64 / Visual Studio 2022 / vcpkg",
+      "description": "Production dependency build for Windows Server 2012 R2 or newer.",
+      "generator": "Visual Studio 17 2022",
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "binaryDir": "${sourceDir}/out/build/windows-vs2022-x64",
+      "installDir": "${sourceDir}/out/install/windows-vs2022-x64",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "WEBSERVER_ENABLE_DEPENDENCIES": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-vs2022-x64-debug",
+      "configurePreset": "windows-vs2022-x64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-vs2022-x64-release",
+      "configurePreset": "windows-vs2022-x64",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-vs2022-x64-debug",
+      "configurePreset": "windows-vs2022-x64",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-vs2022-x64-release",
+      "configurePreset": "windows-vs2022-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
