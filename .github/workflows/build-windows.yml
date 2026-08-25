@@ -1,0 +1,120 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+      # 1. 获取你的项目代码
+      - name: Checkout project
+        uses: actions/checkout@v7
+
+      # 2. 获取 vcpkg
+      - name: Checkout vcpkg
+        uses: actions/checkout@v7
+        with:
+          repository: microsoft/vcpkg
+          path: vcpkg
+
+      # 3. 安装/初始化 vcpkg
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+
+      # 4. 自动判断 CMakeLists.txt 是在根目录还是 WebServer 目录
+      - name: Locate project
+        shell: pwsh
+        run: |
+          if (Test-Path "CMakePresets.json") {
+            $projectDir = "."
+          }
+          elseif (Test-Path "WebServer\CMakePresets.json") {
+            $projectDir = "WebServer"
+          }
+          else {
+            throw "Cannot find CMakePresets.json"
+          }
+
+          Write-Host "Project directory: $projectDir"
+          "PROJECT_DIR=$projectDir" >> $env:GITHUB_ENV
+
+      # 5. CMake 配置
+      # 这里会根据 vcpkg.json 自动安装：
+      # Boost / OpenSSL / SQLite / nlohmann-json / RE2
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          Push-Location $env:PROJECT_DIR
+
+          cmake --preset windows-vs2022-x64
+
+          Pop-Location
+
+      # 6. 编译 Release 版本
+      - name: Build Release
+        shell: pwsh
+        run: |
+          Push-Location $env:PROJECT_DIR
+
+          cmake --build --preset windows-vs2022-x64-release --parallel
+
+          Pop-Location
+
+      # 7. 执行全部 CTest；没有测试或任一失败都会阻止产物发布
+      - name: Run CTest Release
+        shell: pwsh
+        run: |
+          Push-Location $env:PROJECT_DIR
+
+          ctest --preset windows-vs2022-x64-release --output-on-failure --no-tests=error
+
+          Pop-Location
+
+      # 8. 检查 exe 是否真的生成
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:PROJECT_DIR "out\build\windows-vs2022-x64\Release\WebServer.exe"
+
+          if (!(Test-Path $exe)) {
+            throw "WebServer.exe was not generated"
+          }
+
+          Write-Host "EXE generated:"
+          Write-Host $exe
+
+          & $exe --version
+
+      # 9. 整理最终运行文件
+      - name: Prepare package
+        shell: pwsh
+        run: |
+          $releaseDir = Join-Path $env:PROJECT_DIR "out\build\windows-vs2022-x64\Release"
+
+          New-Item -ItemType Directory -Force "artifact\WebServer" | Out-Null
+
+          Copy-Item "$releaseDir\*" "artifact\WebServer" -Recurse -Force
+
+          Write-Host "Package contents:"
+          Get-ChildItem "artifact\WebServer" -Recurse
+
+      # 10. 上传编译结果
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v7
+        with:
+          name: WebServer-Windows-x64
+          path: artifact/WebServer
+          if-no-files-found: error
